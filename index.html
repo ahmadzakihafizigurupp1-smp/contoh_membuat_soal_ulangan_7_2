@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CBT - PENDIDIKAN PANCASILA Kelas VII</title>
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            user-select: none; /* Anti-select */
+            -webkit-user-select: none;
+        }
+        /* Custom Scrollbar for navigation */
+        .nav-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .nav-scroll::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-cyan-600 to-blue-800 min-h-screen text-slate-800 font-sans" oncontextmenu="return false;">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useCallback } = React;
+
+        // ==========================================
+        // 1. KONFIGURASI UJIAN
+        // ==========================================
+        const GOOGLE_SHEETS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxqJh5Y7Ji_1VBQKVIxy9JznhbAeYOSguy5tKXY1DMjuUwgybR3a3QkcyhZQ37XLHA/exec";
+        
+        const EXAM_CONFIG = {
+            mapel: "PENDIDIKAN PANCASILA",
+            jenis: "ULANGAN HARIAN BAB 2",
+            kelas: "VII",
+            durasiMenit: 30,
+            storageKey: "cbt_PENDIDIKAN_PANCASILA_VII"
+        };
+
+        // Data Ekstraksi dari PDF
+        const rawQuestionsData = [
+            {
+                id: 1,
+                type: 'mc',
+                text: "Sila pertama Pancasila mengajarkan kita untuk percaya dan takwa kepada Tuhan Yang Maha Esa. Salah satu contoh penerapan sila pertama dalam kehidupan di sekolah adalah...",
+                options: [
+                    { id: 'A', text: "Menjaga kebersihan ruang kelas bersama-sama" },
+                    { id: 'B', text: "Menghormati teman yang sedang beribadah sesuai agamanya" },
+                    { id: 'C', text: "Menghargai pendapat teman saat berdiskusi kelompok" },
+                    { id: 'D', text: "Membagi tugas piket secara adil dan merata" }
+                ],
+                correctAnswer: 'B'
+            },
+            {
+                id: 2,
+                type: 'mc',
+                text: "(Soal Cerita) Desa Sukamaju mengalami musibah bencana banjir. Banyak warga yang kehilangan rumah dan pakaian. Rian dan teman-temannya di SMP Nusa Bangsa mengumpulkan uang saku serta pakaian layak pakai untuk disumbangkan kepada para korban banjir. Sikap yang ditunjukkan oleh Rian dan teman-temannya merupakan penerapan Pancasila, khususnya sila...",
+                options: [
+                    { id: 'A', text: "Pertama (Ketuhanan Yang Maha Esa)" },
+                    { id: 'B', text: "Kedua (Kemanusiaan yang Adil dan Beradab)" },
+                    { id: 'C', text: "Ketiga (Persatuan Indonesia)" },
+                    { id: 'D', text: "Keempat (Kerakyatan yang Dipimpin oleh Hikmat Kebijaksanaan...)" }
+                ],
+                correctAnswer: 'B'
+            },
+            {
+                id: 3,
+                type: 'mc',
+                text: "(Soal Pernyataan) Perhatikan beberapa sikap dan perilaku berikut!<br/><br/>(1) Menggunakan produk-produk buatan dalam negeri.<br/>(2) Memaksa teman untuk mengikuti keyakinan agama kita.<br/>(3) Berteman tanpa membeda-bedakan suku, agama, dan ras.<br/>(4) Mengutamakan kepentingan pribadi di atas kepentingan bersama.<br/><br/>Penerapan nilai sila ketiga Pancasila (Persatuan Indonesia) ditunjukkan oleh nomor...",
+                options: [
+                    { id: 'A', text: "(1) dan (2)" },
+                    { id: 'B', text: "(1) dan (3)" },
+                    { id: 'C', text: "(2) dan (3)" },
+                    { id: 'D', text: "(3) dan (4)" }
+                ],
+                correctAnswer: 'B'
+            },
+            {
+                id: 4,
+                type: 'mc',
+                text: "Di sekolah, kita sering melakukan musyawarah. Musyawarah artinya pembicaraan bersama untuk mencapai kesepakatan atau keputusan bersama. Kegiatan musyawarah ini merupakan wujud penerapan dari sila...",
+                options: [
+                    { id: 'A', text: "Kedua" },
+                    { id: 'B', text: "Ketiga" },
+                    { id: 'C', text: "Keempat" },
+                    { id: 'D', text: "Kelima" }
+                ],
+                correctAnswer: 'C'
+            },
+            {
+                id: 5,
+                type: 'mc',
+                text: "(Soal Cerita) Kelas 7-B sedang memilih ketua kelas baru. Ada dua calon yang mengajukan diri, yaitu Andi dan Budi. Setelah dilakukan pemungutan suara, Andi mendapatkan suara terbanyak. Budi menerima hasil keputusan tersebut dengan lapang dada dan bersedia membantu Andi menjalankan tugasnya.<br/><br/>Sikap yang ditunjukkan Budi sesuai dengan penerapan nilai Pancasila, yaitu...",
+                options: [
+                    { id: 'A', text: "Menghargai dan menerima keputusan hasil musyawarah bersama" },
+                    { id: 'B', text: "Membantu teman hanya jika diberi imbalan" },
+                    { id: 'C', text: "Memaksa kehendak agar keputusannya diubah" },
+                    { id: 'D', text: "Mengabaikan tugas-tugas di kelas" }
+                ],
+                correctAnswer: 'A'
+            },
+            {
+                id: 6,
+                type: 'mc',
+                text: "Setiap siswa memiliki hak (sesuatu yang harus diterima) dan kewajiban (sesuatu yang harus dilaksanakan). Contoh penerapan nilai kelima Pancasila (Keadilan Sosial bagi Seluruh Rakyat Indonesia) di sekolah adalah...",
+                options: [
+                    { id: 'A', text: "Menuntut hak tanpa melaksanakan kewajiban" },
+                    { id: 'B', text: "Melaksanakan kewajiban belajar dan mendapatkan nilai secara adil" },
+                    { id: 'C', text: "Memilih-milih teman yang kaya saja" },
+                    { id: 'D', text: "Melakukan piket kelas hanya saat diawasi guru" }
+                ],
+                correctAnswer: 'B'
+            },
+            {
+                id: 7,
+                type: 'mc',
+                text: "(Soal Pernyataan) Perhatikan pernyataan-pernyataan berikut!<br/><br/>(1) Suka menyisihkan uang saku untuk ditabung (hidup hemat).<br/>(2) Membantu adik mengerjakan tugas sekolah dengan sabar.<br/>(3) Membeli barang secara berlebihan meskipun tidak dibutuhkan (pola hidup boros).<br/>(4) Menghargai hasil karya orang lain dengan tidak mencontek.<br/><br/>Sikap yang sesuai dengan penerapan sila kelima Pancasila ditunjukkan oleh nomor...",
+                options: [
+                    { id: 'A', text: "(1), (2), dan (3)" },
+                    { id: 'B', text: "(1), (2), dan (4)" },
+                    { id: 'C', text: "(2), (3), dan (4)" },
+                    { id: 'D', text: "(1), (3), dan (4)" }
+                ],
+                correctAnswer: 'B'
+            },
+            {
+                id: 8,
+                type: 'mc',
+                text: "(Soal Cerita) Dalam tugas kelompok Seni Budaya, Dito satu kelompok dengan Made yang berasal dari Bali, Siti yang berasal dari Jawa, dan Laode yang berasal dari Sulawesi. Meskipun berasal dari suku dan latar belakang budaya yang berbeda, mereka saling bekerja sama dan menghargai satu sama lain hingga tugas selesai dengan baik.<br/><br/>Sikap saling menghargai perbedaan tersebut dinamakan toleransi. Kegiatan kelompok Dito mencerminkan penerapan Pancasila sila...",
+                options: [
+                    { id: 'A', text: "Pertama" },
+                    { id: 'B', text: "Kedua" },
+                    { id: 'C', text: "Ketiga" },
+                    { id: 'D', text: "Keempat" }
+                ],
+                correctAnswer: 'C'
+            },
+            {
+                id: 9,
+                type: 'mc',
+                text: "Perilaku perundungan (bullying atau menyakiti teman baik dengan kata-kata maupun fisik) merupakan tindakan yang sangat melanggar nilai Pancasila, khususnya sila...",
+                options: [
+                    { id: 'A', text: "Pertama, karena merusak tanaman di sekolah" },
+                    { id: 'B', text: "Kedua, karena merendahkan harkat dan martabat sesama manusia" },
+                    { id: 'C', text: "Keempat, karena tidak mau ikut pemungutan suara" },
+                    { id: 'D', text: "Kelima, karena tidak mau menabung uang saku" }
+                ],
+                correctAnswer: 'B'
+            },
+            {
+                id: 10,
+                type: 'mc',
+                text: "Menjaga keseimbangan antara hak dan kewajiban serta tidak merugikan orang lain adalah contoh sikap yang sangat penting. Sikap hemat atau tidak boros dalam menggunakan uang saku merupakan wujud amalan sila...",
+                options: [
+                    { id: 'A', text: "Ke-2" },
+                    { id: 'B', text: "Ke-3" },
+                    { id: 'C', text: "Ke-4" },
+                    { id: 'D', text: "Ke-5" }
+                ],
+                correctAnswer: 'D'
+            }
+        ];
+
+        // ==========================================
+        // 2. KOMPONEN SVG IKON MURNI (Anti-Crash)
+        // ==========================================
+        const IconClock = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>;
+        const IconAlert = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-red-500 mx-auto mb-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>;
+        const IconCheck = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-green-500 mx-auto mb-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>;
+
+        // ==========================================
+        // 3. KOMPONEN MODAL STATIS (Diluar App)
+        // ==========================================
+        const ModalOverlay = ({ children }) => (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+                <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md text-center transform scale-100 transition-transform">
+                    {children}
+                </div>
+            </div>
+        );
+
+        const AlertModal = ({ title, message, btnText, onConfirm }) => (
+            <ModalOverlay>
+                <IconAlert />
+                <h3 className="text-xl font-bold text-slate-800 mb-2">{title}</h3>
+                <p className="text-slate-600 mb-6">{message}</p>
+                <button onClick={onConfirm} className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-lg transition-colors">
+                    {btnText}
+                </button>
+            </ModalOverlay>
+        );
+
+        const ConfirmModal = ({ title, message, onCancel, onConfirm }) => (
+            <ModalOverlay>
+                <h3 className="text-xl font-bold text-slate-800 mb-2">{title}</h3>
+                <p className="text-slate-600 mb-6">{message}</p>
+                <div className="flex gap-4">
+                    <button onClick={onCancel} className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold py-3 rounded-lg transition-colors">Batal</button>
+                    <button onClick={onConfirm} className="flex-1 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-3 rounded-lg transition-colors">Kumpulkan</button>
+                </div>
+            </ModalOverlay>
+        );
+
+        // ==========================================
+        // 4. LOGIKA UTAMA APLIKASI
+        // ==========================================
+        function App() {
+            // States
+            const [step, setStep] = useState('check_session'); // check_session, login, resume_prompt, exam, submitting, result
+            const [studentData, setStudentData] = useState({ nama: '', kelas: '', tanggal: new Date().toISOString().split('T')[0] });
+            const [questions, setQuestions] = useState([]);
+            const [answers, setAnswers] = useState({}); // { original_question_id: selected_original_option_id }
+            const [activeQ, setActiveQ] = useState(0);
+            const [timeLeft, setTimeLeft] = useState(EXAM_CONFIG.durasiMenit * 60);
+            const [cheatCount, setCheatCount] = useState(0);
+            const [scoreInfo, setScoreInfo] = useState(null);
+            
+            // Modal States
+            const [modalConfig, setModalConfig] = useState(null); // { type: 'alert'|'confirm', title, message, onConfirm, onCancel, btnText }
+
+            // Utilities: Fisher-Yates Shuffle
+            const shuffleArray = (array) => {
+                let arr = [...array];
+                for (let i = arr.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [arr[i], arr[j]] = [arr[j], arr[i]];
+                }
+                return arr;
+            };
+
+            // Prepare Questions
+            const generateShuffledQuestions = () => {
+                const shuffledQ = shuffleArray(rawQuestionsData).map(q => {
+                    return {
+                        ...q,
+                        options: shuffleArray(q.options)
+                    };
+                });
+                return shuffledQ;
+            };
+
+            // LocalStorage Sync
+            useEffect(() => {
+                if (step === 'exam') {
+                    const dataToSave = { studentData, questions, answers, timeLeft, cheatCount, activeQ };
+                    localStorage.setItem(EXAM_CONFIG.storageKey, JSON.stringify(dataToSave));
+                }
+            }, [answers, timeLeft, cheatCount, activeQ, step, studentData, questions]);
+
+            // Check Session on Mount
+            useEffect(() => {
+                const saved = localStorage.getItem(EXAM_CONFIG.storageKey);
+                if (saved) {
+                    setStep('resume_prompt');
+                } else {
+                    setStep('login');
+                }
+                
+                // Cegah Copy Paste
+                const preventActions = (e) => e.preventDefault();
+                document.addEventListener('copy', preventActions);
+                document.addEventListener('cut', preventActions);
+                document.addEventListener('paste', preventActions);
+                return () => {
+                    document.removeEventListener('copy', preventActions);
+                    document.removeEventListener('cut', preventActions);
+                    document.removeEventListener('paste', preventActions);
+                };
+            }, []);
+
+            // Timer Logic
+            useEffect(() => {
+                let timer;
+                if (step === 'exam' && timeLeft > 0 && !modalConfig) {
+                    timer = setInterval(() => {
+                        setTimeLeft(prev => {
+                            if (prev <= 1) {
+                                clearInterval(timer);
+                                handleAutoSubmit("WAKTU_HABIS");
+                                return 0;
+                            }
+                            return prev - 1;
+                        });
+                    }, 1000);
+                }
+                return () => clearInterval(timer);
+            }, [step, timeLeft, modalConfig]);
+
+            // Anti-Cheat (Visibility & Fullscreen)
+            useEffect(() => {
+                if (step !== 'exam') return;
+
+                const handleViolation = (reason) => {
+                    const newCheatCount = cheatCount + 1;
+                    setCheatCount(newCheatCount);
+
+                    if (newCheatCount >= 2) {
+                        handleAutoSubmit(`DISKUALIFIKASI_PELANGGARAN_2X_${reason}`);
+                    } else {
+                        setModalConfig({
+                            type: 'alert',
+                            title: 'PERINGATAN PELANGGARAN!',
+                            message: 'Anda terdeteksi keluar dari layar ujian atau berpindah tab. Ini adalah peringatan pertama. Jika diulangi, ujian akan dihentikan otomatis.',
+                            btnText: 'Kembali ke Ujian & Fullscreen',
+                            onConfirm: () => {
+                                setModalConfig(null);
+                                requestFullscreen();
+                            }
+                        });
+                    }
+                };
+
+                const onVisibilityChange = () => {
+                    if (document.hidden && !modalConfig) handleViolation('PINDAH_TAB');
+                };
+
+                const onFullscreenChange = () => {
+                    if (!document.fullscreenElement && !modalConfig) handleViolation('KELUAR_FULLSCREEN');
+                };
+
+                document.addEventListener('visibilitychange', onVisibilityChange);
+                document.addEventListener('fullscreenchange', onFullscreenChange);
+
+                return () => {
+                    document.removeEventListener('visibilitychange', onVisibilityChange);
+                    document.removeEventListener('fullscreenchange', onFullscreenChange);
+                };
+            }, [step, cheatCount, modalConfig]);
+
+            const requestFullscreen = () => {
+                if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen().catch(err => console.log(err));
+                }
+            };
+
+            const startExam = (e) => {
+                e.preventDefault();
+                if(!studentData.nama || !studentData.kelas) return alert("Lengkapi data!");
+                setQuestions(generateShuffledQuestions());
+                setStep('exam');
+                requestFullscreen();
+            };
+
+            const resumeExam = () => {
+                const saved = JSON.parse(localStorage.getItem(EXAM_CONFIG.storageKey));
+                setStudentData(saved.studentData);
+                setQuestions(saved.questions);
+                setAnswers(saved.answers);
+                setTimeLeft(saved.timeLeft);
+                setCheatCount(saved.cheatCount);
+                setActiveQ(saved.activeQ);
+                setStep('exam');
+                requestFullscreen();
+            };
+
+            const restartExam = () => {
+                localStorage.removeItem(EXAM_CONFIG.storageKey);
+                setStep('login');
+            };
+
+            const handleAnswerSelect = (originalQuestionId, originalOptionId) => {
+                setAnswers(prev => ({ ...prev, [originalQuestionId]: originalOptionId }));
+            };
+
+            // Grade & Format Result
+            const calculateResult = () => {
+                let correctCount = 0;
+                let rincianArr = [];
+                
+                // Urutkan rincian berdasarkan ID Asli (1 sampai N)
+                const sortedOriginals = [...rawQuestionsData].sort((a,b) => a.id - b.id);
+
+                sortedOriginals.forEach(q => {
+                    const ansId = answers[q.id];
+                    if (!ansId) {
+                        rincianArr.push(`Soal ${q.id}: KOSONG`);
+                    } else if (ansId === q.correctAnswer) {
+                        correctCount++;
+                        rincianArr.push(`Soal ${q.id}: BENAR`);
+                    } else {
+                        rincianArr.push(`Soal ${q.id}: SALAH (Pilih: ${ansId}, Kunci: ${q.correctAnswer})`);
+                    }
+                });
+
+                const score = (correctCount / rawQuestionsData.length) * 100;
+                return {
+                    score: Math.round(score),
+                    rincianStr: rincianArr.join(" | ")
+                };
+            };
+
+            const submitToServer = async (reasonText) => {
+                setStep('submitting');
+                const result = calculateResult();
+                
+                const payload = {
+                    nama: studentData.nama,
+                    kelas: studentData.kelas,
+                    tanggal: studentData.tanggal,
+                    skor: result.score,
+                    pelanggaran: cheatCount,
+                    keterangan: reasonText,
+                    rincianJawaban: result.rincianStr
+                };
+
+                try {
+                    // Send to Google Sheets
+                    await fetch(GOOGLE_SHEETS_WEB_APP_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify(payload)
+                    });
+                } catch (e) {
+                    console.error("Gagal mengirim data", e);
+                }
+
+                // Cleanup & Show Result
+                if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
+                localStorage.removeItem(EXAM_CONFIG.storageKey);
+                setScoreInfo(payload);
+                setStep('result');
+            };
+
+            const handleAutoSubmit = (reason) => {
+                submitToServer(reason);
+                setModalConfig(null);
+            };
+
+            const triggerManualSubmit = () => {
+                setModalConfig({
+                    type: 'confirm',
+                    title: 'Selesai & Kumpulkan?',
+                    message: 'Pastikan semua jawaban telah terisi. Anda tidak dapat mengubah jawaban setelah mengumpulkan ujian ini.',
+                    onCancel: () => setModalConfig(null),
+                    onConfirm: () => {
+                        setModalConfig(null);
+                        submitToServer("SELESAI_MANUAL");
+                    }
+                });
+            };
+
+            const formatTime = (sec) => {
+                const m = Math.floor(sec / 60).toString().padStart(2, '0');
+                const s = (sec % 60).toString().padStart(2, '0');
+                return `${m}:${s}`;
+            };
+
+            // ==========================================
+            // VIEWS
+            // ==========================================
+            if (step === 'login' || step === 'check_session') {
+                return (
+                    <div className="flex items-center justify-center min-h-screen p-4">
+                        <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
+                            <div className="bg-cyan-700 p-6 text-white text-center">
+                                <h1 className="text-2xl font-bold">{EXAM_CONFIG.mapel}</h1>
+                                <p className="text-cyan-100 mt-1">{EXAM_CONFIG.jenis} - Kelas {EXAM_CONFIG.kelas}</p>
+                            </div>
+                            <form onSubmit={startExam} className="p-8 space-y-6">
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Nama Lengkap</label>
+                                    <input type="text" required value={studentData.nama} onChange={e => setStudentData({...studentData, nama: e.target.value})} className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 outline-none transition-all" placeholder="Masukkan nama lengkap..." />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Kelas</label>
+                                    <input type="text" required value={studentData.kelas} onChange={e => setStudentData({...studentData, kelas: e.target.value})} className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 outline-none transition-all" placeholder="Contoh: VII-A" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Tanggal Ujian</label>
+                                    <input type="date" required value={studentData.tanggal} onChange={e => setStudentData({...studentData, tanggal: e.target.value})} className="w-full px-4 py-3 rounded-lg border border-slate-300 outline-none bg-slate-50 text-slate-600" />
+                                </div>
+                                <button type="submit" className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-4 rounded-xl shadow-lg transition-all transform active:scale-95 text-lg">
+                                    Mulai Ujian
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (step === 'resume_prompt') {
+                return (
+                    <div className="flex items-center justify-center min-h-screen p-4">
+                        <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8 text-center">
+                            <h2 className="text-2xl font-bold text-slate-800 mb-4">Sesi Ujian Tersimpan!</h2>
+                            <p className="text-slate-600 mb-8">Sistem menemukan progres ujian Anda yang belum selesai. Anda ingin melanjutkan?</p>
+                            <div className="space-y-3">
+                                <button onClick={resumeExam} className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 rounded-lg transition-colors">Lanjutkan Ujian</button>
+                                <button onClick={restartExam} className="w-full bg-red-100 hover:bg-red-200 text-red-700 font-bold py-3 rounded-lg transition-colors">Mulai Ulang (Hapus Progres)</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (step === 'submitting') {
+                return (
+                    <div className="flex items-center justify-center min-h-screen text-white flex-col gap-4">
+                        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-white"></div>
+                        <h2 className="text-xl font-bold">Menyimpan Jawaban...</h2>
+                    </div>
+                );
+            }
+
+            if (step === 'result') {
+                return (
+                    <div className="flex items-center justify-center min-h-screen p-4">
+                        <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-8 text-center">
+                            <IconCheck />
+                            <h2 className="text-3xl font-bold text-slate-800 mb-2">Ujian Selesai</h2>
+                            <p className="text-slate-500 mb-6">Data jawaban Anda telah berhasil dikirim.</p>
+                            <div className="bg-slate-50 rounded-xl p-4 mb-6 border border-slate-100">
+                                <div className="text-sm text-slate-500 mb-1">Skor Anda</div>
+                                <div className="text-5xl font-extrabold text-cyan-600">{scoreInfo.skor}</div>
+                            </div>
+                            <div className="text-left text-sm text-slate-600 space-y-2 border-t pt-4">
+                                <p><strong>Nama:</strong> {scoreInfo.nama}</p>
+                                <p><strong>Kelas:</strong> {scoreInfo.kelas}</p>
+                                <p><strong>Status:</strong> {scoreInfo.keterangan.replace(/_/g, ' ')}</p>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            // EXAM VIEW
+            const currentQ = questions[activeQ];
+            const isLast = activeQ === questions.length - 1;
+
+            return (
+                <div className="min-h-screen flex flex-col bg-slate-50 select-none">
+                    {/* Header */}
+                    <header className="bg-white shadow-sm px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4 shrink-0">
+                        <div>
+                            <h1 className="text-xl font-extrabold text-cyan-700">{EXAM_CONFIG.mapel}</h1>
+                            <p className="text-sm font-medium text-slate-500">{EXAM_CONFIG.jenis} • Kelas {studentData.kelas}</p>
+                        </div>
+                        <div className="flex items-center gap-3 bg-cyan-50 px-4 py-2 rounded-full text-cyan-800 font-bold border border-cyan-100">
+                            <IconClock />
+                            <span className={timeLeft <= 300 ? 'text-red-600 animate-pulse' : ''}>{formatTime(timeLeft)}</span>
+                        </div>
+                    </header>
+
+                    {/* Main Content */}
+                    <main className="flex-1 flex flex-col lg:flex-row max-w-7xl w-full mx-auto p-4 gap-6 overflow-hidden">
+                        
+                        {/* Area Soal (Kiri/Tengah) */}
+                        <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
+                            <div className="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                                <h2 className="text-lg font-bold text-slate-700">Soal No. {activeQ + 1}</h2>
+                            </div>
+                            <div className="p-6 overflow-y-auto flex-1 text-lg text-slate-800 leading-relaxed nav-scroll">
+                                {currentQ.image && (
+                                    <img src={currentQ.image} alt="Ilustrasi Soal" className="mb-6 max-w-full h-auto rounded-lg border border-slate-200" />
+                                )}
+                                <div dangerouslySetInnerHTML={{ __html: currentQ.text }} className="mb-8" />
+                                
+                                <div className="space-y-3">
+                                    {currentQ.options.map((opt, idx) => {
+                                        const isSelected = answers[currentQ.id] === opt.id;
+                                        const labelLetter = String.fromCharCode(65 + idx);
+                                        return (
+                                            <div 
+                                                key={opt.id} 
+                                                onClick={() => handleAnswerSelect(currentQ.id, opt.id)}
+                                                className={`flex items-start p-4 rounded-xl border-2 cursor-pointer transition-all ${isSelected ? 'border-cyan-500 bg-cyan-50' : 'border-slate-200 hover:border-cyan-300 hover:bg-slate-50'}`}
+                                            >
+                                                <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold mr-4 ${isSelected ? 'bg-cyan-500 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                                                    {labelLetter}
+                                                </div>
+                                                <div className="pt-1 text-base">{opt.text}</div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                            {/* Navigasi Prev/Next */}
+                            <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-between items-center shrink-0 gap-4">
+                                <button 
+                                    onClick={() => setActiveQ(prev => Math.max(0, prev - 1))}
+                                    disabled={activeQ === 0}
+                                    className="px-6 py-3 rounded-lg font-semibold text-slate-600 bg-white border border-slate-300 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    Sebelumnya
+                                </button>
+                                
+                                {isLast ? (
+                                    <button 
+                                        onClick={triggerManualSubmit}
+                                        className="px-6 py-3 rounded-lg font-bold text-white bg-green-600 hover:bg-green-700 shadow-md transition-colors"
+                                    >
+                                        Selesai & Kumpulkan
+                                    </button>
+                                ) : (
+                                    <button 
+                                        onClick={() => setActiveQ(prev => Math.min(questions.length - 1, prev + 1))}
+                                        className="px-6 py-3 rounded-lg font-bold text-white bg-cyan-600 hover:bg-cyan-700 shadow-md transition-colors"
+                                    >
+                                        Selanjutnya
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Area Navigasi Kotak (Kanan) */}
+                        <div className="lg:w-80 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden shrink-0 h-fit max-h-full">
+                            <div className="p-4 border-b border-slate-100 bg-slate-50 font-bold text-slate-700 text-center">
+                                Navigasi Soal
+                            </div>
+                            <div className="p-4 grid grid-cols-5 gap-2 overflow-y-auto nav-scroll">
+                                {questions.map((q, idx) => {
+                                    const isAnswered = !!answers[q.id];
+                                    const isActive = activeQ === idx;
+                                    return (
+                                        <button
+                                            key={q.id}
+                                            onClick={() => setActiveQ(idx)}
+                                            className={`
+                                                aspect-square rounded-lg font-bold text-sm flex items-center justify-center transition-all
+                                                ${isAnswered ? 'bg-green-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}
+                                                ${isActive ? 'ring-4 ring-cyan-300' : ''}
+                                            `}
+                                        >
+                                            {idx + 1}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            <div className="p-4 bg-slate-50 border-t border-slate-100 flex flex-col gap-2 text-xs font-medium text-slate-500">
+                                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-green-500"></div> Sudah Dijawab</div>
+                                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-slate-200"></div> Belum Dijawab</div>
+                                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded border-2 border-cyan-400 bg-white"></div> Sedang Dibuka</div>
+                            </div>
+                        </div>
+
+                    </main>
+
+                    {/* Modals Rendering (Anti-Flicker React Model) */}
+                    {modalConfig && modalConfig.type === 'alert' && (
+                        <AlertModal title={modalConfig.title} message={modalConfig.message} btnText={modalConfig.btnText} onConfirm={modalConfig.onConfirm} />
+                    )}
+                    {modalConfig && modalConfig.type === 'confirm' && (
+                        <ConfirmModal title={modalConfig.title} message={modalConfig.message} onCancel={modalConfig.onCancel} onConfirm={modalConfig.onConfirm} />
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
